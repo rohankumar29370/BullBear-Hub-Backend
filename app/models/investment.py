@@ -12,3 +12,12 @@ class Investment(db.Model):
     def __str__(self):
         return f'[id: {self.id}, portfolioId: {self.portfolio_id}, ticker: {self.ticker}, price: {self.price}, quantity: {self.quantity}]'
     
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "ticker": self.ticker,
+            "price": self.price,
+            "quantity": self.quantity,
+            "date": self.date
+        }
+    

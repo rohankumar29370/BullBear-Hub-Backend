@@ -1,9 +1,11 @@
+import os
+
 class Config:
-    username = "xxx"
-    password = "xx"
-    hostname = "xxxxxx"
+    username = "XXX"
+    password = "XXX"
+    hostname = "XXX"
     port = "3306"
-    database = "xxxxxxx"
+    database = "XXX"
     SQLALCHEMY_DATABASE_URI = f"mysql+pymysql://{username}:{password}@{hostname}:{port}/{database}"
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_RECORD_QUERIES = True
