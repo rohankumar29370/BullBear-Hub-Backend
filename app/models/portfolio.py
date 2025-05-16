@@ -10,3 +10,9 @@ class Portfolio(db.Model):
     def __str__(self):
         return f'[id: {self.id}, name: {self.name}, strategy={self.strategy}]'
     
+    def to_dict(self): 
+        return {
+            "id": self.id,
+            "name": self.name,
+            "strategy": self.strategy
+        }

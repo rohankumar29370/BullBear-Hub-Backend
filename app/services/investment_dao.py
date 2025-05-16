@@ -10,53 +10,55 @@ from app.extensions import db
 def get_investments_by_portfolio(portfolioId: int) -> List[Investment]:
     try:
         if not isinstance(portfolioId, int):
-            raise Exception(f'Porftolio ID must be an int found {portfolioId}')
-        return Investment.query.filter_by(portfolio_id=portfolioId).all()
+            raise QueryException(f'Portfolio ID must be an integer, received: {portfolioId}')
+        
+        investments = Investment.query.filter_by(portfolio_id=portfolioId).all()
+        return investments
     except Exception as e:
-        raise QueryException(f'Failed to get investments with portfolio ID {portfolioId}')
+        raise QueryException(f'Failed to get investments with portfolio ID {portfolioId}: {str(e)}', e)
 
 
 def get_investments(investmentId: int) -> Investment:
     try:
         if not isinstance(investmentId, int):
-            raise Exception(f'Investment ID must be an int found {investmentId}')
+            raise Exception(f'Investment ID must be a number, received: {investmentId}')
         return Investment.query.filter_by(id=investmentId).one()
-    except NoResultFound:
-        raise QueryException(f'No Investments exist with ID {investmentId}')
-    except MultipleResultsFound:
-        raise QueryException(f'Found multiple investments with the same ID {investmentId}')
+    except NoResultFound as e:
+        raise QueryException(f'Cannot find investment #{investmentId}. This investment may have been already sold completely.', e)
+    except MultipleResultsFound as e:
+        raise QueryException(f'System error: Multiple records found for investment #{investmentId}. Please contact support.', e)
     except Exception as e:
-        raise QueryException(f'Failed to get investment with ID {investmentId}: {str(e)}')
+        raise QueryException(f'Failed to retrieve investment #{investmentId}. Please try again.', e)
 
 def harvest_investment(investmentId: int) -> None:
     try:
         if not isinstance(investmentId, int):
-            raise Exception(f'Investment ID must be an int found {investmentId}')
+            raise Exception(f'Investment ID must be a number, received: {investmentId}')
         investment = Investment.query.filter_by(id=investmentId).one()
         db.session.delete(investment)
         db.session.commit()
-    except NoResultFound:
-        raise QueryException(f'No Investments exist with ID {investmentId}')
-    except MultipleResultsFound:
-        raise QueryException(f'Found multiple investments with the same ID {investmentId}')
+    except NoResultFound as e:
+        raise QueryException(f'Cannot delete investment #{investmentId} as it no longer exists in your portfolio.', e)
+    except MultipleResultsFound as e:
+        raise QueryException(f'System error: Multiple records found for investment #{investmentId}. Please contact support.', e)
     except Exception as e:
         db.session.rollback()
-        raise QueryException(f'Failed to harvest investment with ID {investmentId}: {str(e)}')
+        raise QueryException(f'Failed to remove investment #{investmentId} from your portfolio. Please try again.', e)
 
 def update_qty(investmentId: int, qty: int) -> None:
     try:
         if not isinstance(investmentId, int) or not isinstance(qty, int):
-            raise Exception(f'Investment ID and Qty must be an int found investment ID={investmentId}, qty={qty}')
+            raise Exception(f'Investment ID and quantity must be numbers. Received: ID={investmentId}, quantity={qty}')
         investment = Investment.query.filter_by(id=investmentId).one()
         investment.quantity = qty
         db.session.commit()
-    except NoResultFound:
-        raise QueryException(f'No Investments exist with ID {investmentId}')
-    except MultipleResultsFound:
-        raise QueryException(f'Found multiple investments with the same ID {investmentId}')
+    except NoResultFound as e:
+        raise QueryException(f'Cannot update investment #{investmentId} as it no longer exists in your portfolio.', e)
+    except MultipleResultsFound as e:
+        raise QueryException(f'System error: Multiple records found for investment #{investmentId}. Please contact support.', e)
     except Exception as e:
-        db.session.rollbal()
-        raise QueryException(f'Failed to update investment quantity [Investment Id: {investmentId}]: {str(e)}')
+        db.session.rollback()
+        raise QueryException(f'Failed to update quantity for investment #{investmentId}. Please try again.', e)
 
 def purchase(porftolio_id, ticker, price, quantity):
     try:
@@ -64,14 +66,14 @@ def purchase(porftolio_id, ticker, price, quantity):
         balance: float = get_balance(userId)
         investment_cost: float = price * quantity
         if balance < investment_cost:
-            raise Exception('No sufficient funds')
+            raise Exception('Insufficient funds to complete this purchase.')
         investment = Investment(portfolio_id=porftolio_id, ticker=ticker, price=price, quantity=quantity, date=date.today())
         db.session.add(investment)
         db.session.commit()
         update_balance(userId, balance - investment_cost)
     except Exception as e:
         db.session.rollback()
-        raise QueryException('Failed to place purchase order', e)
+        raise QueryException('Unable to complete purchase. Please check your balance and try again.', e)
 
 def sell(investmentId, qty, sale_price):
     investment: Investment = get_investments(investmentId)

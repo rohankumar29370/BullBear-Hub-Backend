@@ -28,7 +28,8 @@ def password_matches(username:str, password:str)->bool:
         # session = db.session
         # users = session.query(User).filter(User.username == username).one()
         user = User.query.filter_by(username=username).one()
-        return password == user.password
+        if password == user.password:
+            return user
     except NoResultFound as e:
         raise QueryException(f'No user found with username: {username}', e)
     except MultipleResultsFound as e:
