@@ -15,9 +15,10 @@ class Investment(db.Model):
     def to_dict(self):
         return {
             "id": self.id,
+            "portfolio_id": self.portfolio_id,
             "ticker": self.ticker,
             "price": self.price,
             "quantity": self.quantity,
-            "date": self.date
+            "date": self.date.isoformat() if self.date else None
         }
     

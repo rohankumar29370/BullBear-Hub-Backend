@@ -4,7 +4,7 @@ class User(db.Model):
     __tablename__ = "User"
 
     id = db.Column(db.Integer, primary_key=True, autoincrement = True)
-    username = db.Column(db.String, nullable =False)
+    username = db.Column(db.String, nullable =False, unique=True)
     password = db.Column(db.String, nullable =False)
     is_active = db.Column(db.Boolean, default=True)
     balance= db.Column(db.Float, nullable = False)

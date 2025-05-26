@@ -12,9 +12,18 @@ def get_investments_by_portfolio(portfolioId: int) -> List[Investment]:
         if not isinstance(portfolioId, int):
             raise QueryException(f'Portfolio ID must be an integer, received: {portfolioId}')
         
-        investments = Investment.query.filter_by(portfolio_id=portfolioId).all()
+        print(f"Querying investments for portfolio ID: {portfolioId}")
+        query = Investment.query.filter_by(portfolio_id=portfolioId)
+        print(f"SQL Query: {query.statement.compile(compile_kwargs={'literal_binds': True})}")
+        
+        investments = query.all()
+        print(f"Number of investments found: {len(investments)}")
+        for inv in investments:
+            print(f"Investment details: id={inv.id}, portfolio_id={inv.portfolio_id}, ticker={inv.ticker}, price={inv.price}, quantity={inv.quantity}")
+        
         return investments
     except Exception as e:
+        print(f"Error in get_investments_by_portfolio: {str(e)}")
         raise QueryException(f'Failed to get investments with portfolio ID {portfolioId}: {str(e)}', e)
 
 
@@ -60,20 +69,42 @@ def update_qty(investmentId: int, qty: int) -> None:
         db.session.rollback()
         raise QueryException(f'Failed to update quantity for investment #{investmentId}. Please try again.', e)
 
-def purchase(porftolio_id, ticker, price, quantity):
+def purchase(portfolio_id, ticker, price, quantity):
     try:
-        userId: int = get_portfolio_by_id(porftolio_id).userId.value
-        balance: float = get_balance(userId)
-        investment_cost: float = price * quantity
+        if not isinstance(portfolio_id, int):
+            raise Exception(f'Portfolio ID must be a number, received: {portfolio_id}')
+        if not isinstance(price, (int, float)) or price <= 0:
+            raise Exception(f'Price must be a positive number, received: {price}')
+        if not isinstance(quantity, int) or quantity <= 0:
+            raise Exception(f'Quantity must be a positive integer, received: {quantity}')
+            
+        portfolio = get_portfolio_by_id(portfolio_id)
+        if not portfolio:
+            raise Exception(f'Portfolio with ID {portfolio_id} not found')
+            
+        userId = portfolio.userId
+        balance = get_balance(userId)
+        investment_cost = price * quantity
+        
         if balance < investment_cost:
-            raise Exception('Insufficient funds to complete this purchase.')
-        investment = Investment(portfolio_id=porftolio_id, ticker=ticker, price=price, quantity=quantity, date=date.today())
+            raise Exception(f'Insufficient funds. Required: ${investment_cost:.2f}, Available: ${balance:.2f}')
+            
+        investment = Investment(
+            portfolio_id=portfolio_id,
+            ticker=ticker,
+            price=price,
+            quantity=quantity,
+            date=date.today()
+        )
+        
         db.session.add(investment)
         db.session.commit()
         update_balance(userId, balance - investment_cost)
+        
+        return investment
     except Exception as e:
         db.session.rollback()
-        raise QueryException('Unable to complete purchase. Please check your balance and try again.', e)
+        raise QueryException(f'Unable to complete purchase: {str(e)}', e)
 
 def sell(investmentId, qty, sale_price):
     investment: Investment = get_investments(investmentId)
